@@ -20,7 +20,7 @@
 #include "myconfig.h"
 
 #define SEALEVELPRESSURE_HPA (1013.25)
-
+#define MSG_BUFFER_SIZE  (50)
 
 // DECLARATIONS
 bool DEBUG_MODE = false;
@@ -29,12 +29,11 @@ unsigned long delayTime;
 WiFiClient espClient;
 PubSubClient client(espClient);
 unsigned long lastMsg = 0;
-#define MSG_BUFFER_SIZE  (50)
 char msg[MSG_BUFFER_SIZE];
 int value = 0;
-String temperatureUrl = String("/homeassistant/sensors/" + sensorName + "/Temperature");
-String humidityUrl = String("/homeassistant/sensors/" + sensorName + "/Humidity");
-String pressureUrl = String("/homeassistant/sensors/" + sensorName + "/Pressure");
+String temperatureUrl = String("/sensors/" + sensorName + "/Temperature");
+String humidityUrl = String("/sensors/" + sensorName + "/Humidity");
+String pressureUrl = String("/sensors/" + sensorName + "/Pressure");
 
 // FONCTIONS
 void setup_wifi() {
