@@ -11,7 +11,6 @@
   BSD license, all text above must be included in any redistribution
   See the LICENSE file for details.
  ***************************************************************************/
-
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
@@ -19,15 +18,6 @@
 #include <PubSubClient.h>
 
 #include "myconfig.h"
-/*
-// Content of myconfig.h
-// It should be filled with your own network configuartion (Wifi, MQTT broker, sensor name)
-
-const char* ssid =  "";   // cannot be longer than 32 characters!
-const char* password =  "";  
-const char* mqtt_server = "";
-String sensorName = "sensorNbX";
-*/
 
 #define SEALEVELPRESSURE_HPA (1013.25)
 
@@ -42,9 +32,9 @@ unsigned long lastMsg = 0;
 #define MSG_BUFFER_SIZE  (50)
 char msg[MSG_BUFFER_SIZE];
 int value = 0;
-String temperatureUrl = String("/sensors/" + sensorName + "/Temperature");
-String humidityUrl = String("/sensors/" + sensorName + "/Humidity");
-String pressureUrl = String("/sensors/" + sensorName + "/Pressure");
+String temperatureUrl = String("/homeassistant/sensors/" + sensorName + "/Temperature");
+String humidityUrl = String("/homeassistant/sensors/" + sensorName + "/Humidity");
+String pressureUrl = String("/homeassistant/sensors/" + sensorName + "/Pressure");
 
 // FONCTIONS
 void setup_wifi() {
@@ -106,6 +96,27 @@ void reconnect() {
   }
 }
 
+void printValues() {
+    Serial.print("Temperature = ");
+    Serial.print(bme.readTemperature());
+    Serial.println(" *C");
+
+    Serial.print("Pressure = ");
+
+    Serial.print(bme.readPressure() / 100.0F);
+    Serial.println(" hPa");
+
+    Serial.print("Approx. Altitude = ");
+    Serial.print(bme.readAltitude(SEALEVELPRESSURE_HPA));
+    Serial.println(" m");
+
+    Serial.print("Humidity = ");
+    Serial.print(bme.readHumidity());
+    Serial.println(" %");
+
+    Serial.println("---------------------------");
+}
+
 void setup() {
     Serial.begin(115200);
     delay(10);
@@ -155,26 +166,4 @@ void loop() {
     }
 
     delay(delayTime);
-}
-
-
-void printValues() {
-    Serial.print("Temperature = ");
-    Serial.print(bme.readTemperature());
-    Serial.println(" *C");
-
-    Serial.print("Pressure = ");
-
-    Serial.print(bme.readPressure() / 100.0F);
-    Serial.println(" hPa");
-
-    Serial.print("Approx. Altitude = ");
-    Serial.print(bme.readAltitude(SEALEVELPRESSURE_HPA));
-    Serial.println(" m");
-
-    Serial.print("Humidity = ");
-    Serial.print(bme.readHumidity());
-    Serial.println(" %");
-
-    Serial.println("---------------------------");
 }
