@@ -51,5 +51,12 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
+# macOS file system
+**/.DS_Store
+
+# IDE
+.vscode
+.pio
+
 # User configuration
 myconfig.h
