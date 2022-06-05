@@ -23,11 +23,11 @@
 #define MSG_BUFFER_SIZE  50
 #define BAUD_RATE 115200
 #define MQTT_PORT 1883
+#define LOOP_DELAY 60000
 
 // DECLARATIONS
 bool DEBUG_MODE = true;
 Adafruit_BME280 bme; // I2C
-unsigned long delayTime;
 WiFiClient espClient;
 PubSubClient client(espClient);
 unsigned long lastMsg = 0;
@@ -135,8 +135,6 @@ void setup()
   Serial.println("-- Default Test --");
   Serial.println("normal mode, 16x oversampling for all, filter off,");
   Serial.println("0.5ms standby period");
-  delayTime = 5000;
-  
   Serial.println();
 }
 
@@ -170,7 +168,7 @@ void loop()
       printValues();
   }
 
-  // delay(delayTime);
+  delay(LOOP_DELAY);
   // deepSlepp for 60s
   // ESP.deepSleep(60 * 1000000);
 }
