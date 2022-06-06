@@ -23,10 +23,10 @@
 #define MSG_BUFFER_SIZE  50
 #define BAUD_RATE 115200
 #define MQTT_PORT 1883
-#define LOOP_DELAY 60000
+#define SLEEP_DELAY_MS 300000  // 5 * 60 * 1000 = 300 000 => 5 minutes
 
 // DECLARATIONS
-bool DEBUG_MODE = true;
+bool DEBUG_MODE = false;
 Adafruit_BME280 bme; // I2C
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -149,26 +149,22 @@ void loop()
   // Only needed in forced mode! In normal mode, you can remove the next line.
   bme.takeForcedMeasurement(); // has no effect in normal mode
 
+  sensorTemperature = bme.readTemperature();
+  sensorPressure = bme.readPressure();
+  sensorHumidity = bme.readHumidity();
+  snprintf(msg, MSG_BUFFER_SIZE, "%f", sensorTemperature);
+  client.publish(temperatureUrl.c_str(), msg);
+  snprintf(msg, MSG_BUFFER_SIZE, "%f", sensorHumidity);
+  client.publish(humidityUrl.c_str(), msg);
+  snprintf(msg, MSG_BUFFER_SIZE, "%f", sensorPressure / 100.0F);
+  client.publish(pressureUrl.c_str(), msg);
+  
+  if(DEBUG_MODE)
+    printValues();
+  
+  // wait 500ms that MQTT messaged are published over wifi
+  delay(500);
 
-  unsigned long now = millis();
-  if (now - lastMsg > 2000) 
-  {
-    lastMsg = now;
-    sensorTemperature = bme.readTemperature();
-    sensorPressure = bme.readPressure();
-    sensorHumidity = bme.readHumidity();
-    snprintf(msg, MSG_BUFFER_SIZE, "%f", sensorTemperature);
-    client.publish(temperatureUrl.c_str(), msg);
-    snprintf(msg, MSG_BUFFER_SIZE, "%f", sensorHumidity);
-    client.publish(humidityUrl.c_str(), msg);
-    snprintf(msg, MSG_BUFFER_SIZE, "%f", sensorPressure / 100.0F);
-    client.publish(pressureUrl.c_str(), msg);
-
-    if(DEBUG_MODE)
-      printValues();
-  }
-
-  delay(LOOP_DELAY);
-  // deepSlepp for 60s
-  // ESP.deepSleep(60 * 1000000);
+  // Enter in sleep mode
+  ESP.deepSleep((SLEEP_DELAY_MS - 500) * 1000);
 }
