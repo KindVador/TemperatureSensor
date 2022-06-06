@@ -19,25 +19,30 @@
 
 #include "myconfig.h"
 
-#define SEALEVELPRESSURE_HPA (1013.25)
-#define MSG_BUFFER_SIZE  (50)
+#define SEALEVELPRESSURE_HPA 1013.25
+#define MSG_BUFFER_SIZE  50
+#define BAUD_RATE 115200
+#define MQTT_PORT 1883
+#define SLEEP_DELAY_MS 300000  // 5 * 60 * 1000 = 300 000 => 5 minutes
 
 // DECLARATIONS
 bool DEBUG_MODE = false;
 Adafruit_BME280 bme; // I2C
-unsigned long delayTime;
 WiFiClient espClient;
 PubSubClient client(espClient);
 unsigned long lastMsg = 0;
 char msg[MSG_BUFFER_SIZE];
 int value = 0;
+float sensorTemperature = 0.0;
+float sensorPressure = 0.0;
+float sensorHumidity = 0.0;
 String temperatureUrl = String("/sensors/" + sensorName + "/Temperature");
 String humidityUrl = String("/sensors/" + sensorName + "/Humidity");
 String pressureUrl = String("/sensors/" + sensorName + "/Pressure");
 
 // FONCTIONS
-void setup_wifi() {
-
+void setup_wifi() 
+{
   delay(10);
   // We start by connecting to a WiFi network
   Serial.println();
@@ -60,18 +65,20 @@ void setup_wifi() {
   Serial.println(WiFi.localIP());
 }
 
-void callback(char* topic, byte* payload, unsigned int length) {
+void callback(char* topic, byte* payload, unsigned int length) 
+{
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
-  for (int i = 0; i < length; i++) {
+  for (unsigned int i = 0; i < length; i++) {
     Serial.print((char)payload[i]);
   }
   Serial.println();
 
 }
 
-void reconnect() {
+void reconnect() 
+{
   // Loop until we're reconnected
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
@@ -95,74 +102,69 @@ void reconnect() {
   }
 }
 
-void printValues() {
-    Serial.print("Temperature = ");
-    Serial.print(bme.readTemperature());
-    Serial.println(" *C");
+void printValues() 
+{
+  Serial.print("Temperature = ");
+  Serial.print(sensorTemperature);
+  Serial.println(" *C");
 
-    Serial.print("Pressure = ");
+  Serial.print("Pressure = ");
+  Serial.print(sensorPressure / 100.0F);
+  Serial.println(" hPa");
 
-    Serial.print(bme.readPressure() / 100.0F);
-    Serial.println(" hPa");
+  Serial.print("Humidity = ");
+  Serial.print(sensorHumidity);
+  Serial.println(" %");
 
-    Serial.print("Approx. Altitude = ");
-    Serial.print(bme.readAltitude(SEALEVELPRESSURE_HPA));
-    Serial.println(" m");
-
-    Serial.print("Humidity = ");
-    Serial.print(bme.readHumidity());
-    Serial.println(" %");
-
-    Serial.println("---------------------------");
+  Serial.println("---------------------------");
 }
 
-void setup() {
-    Serial.begin(115200);
-    delay(10);
-    setup_wifi();
-    client.setServer(mqtt_server, 1883);
-    client.setCallback(callback);
-    
-    if (!bme.begin(0x76, &Wire)) {
-        Serial.println("Could not find a valid BME280 sensor, check wiring!");
-        while (1);
-    }
-
-    Serial.println("-- Default Test --");
-    Serial.println("normal mode, 16x oversampling for all, filter off,");
-    Serial.println("0.5ms standby period");
-    delayTime = 5000;
-    
-    Serial.println();
-}
-
-
-void loop() {
+void setup() 
+{
+  Serial.begin(BAUD_RATE);
+  delay(10);
+  setup_wifi();
+  client.setServer(mqtt_server, MQTT_PORT);
+  client.setCallback(callback);
   
-    if (!client.connected()) 
-    {
-      reconnect();
-    }
-    
-    client.loop();
-    
-    
-    // Only needed in forced mode! In normal mode, you can remove the next line.
-    bme.takeForcedMeasurement(); // has no effect in normal mode
+  if (!bme.begin(0x76, &Wire)) {
+      Serial.println("Could not find a valid BME280 sensor, check wiring!");
+      while (1);
+  }
 
-    if(DEBUG_MODE) printValues();
-    
-    unsigned long now = millis();
-    if (now - lastMsg > 2000) 
-    {
-      lastMsg = now;
-      snprintf(msg, MSG_BUFFER_SIZE, "%f", bme.readTemperature());
-      client.publish(temperatureUrl.c_str(), msg);
-      snprintf(msg, MSG_BUFFER_SIZE, "%f", bme.readHumidity());
-      client.publish(humidityUrl.c_str(), msg);
-      snprintf(msg, MSG_BUFFER_SIZE, "%f", bme.readPressure() / 100.0F);
-      client.publish(pressureUrl.c_str(), msg);
-    }
+  Serial.println("-- Default Test --");
+  Serial.println("normal mode, 16x oversampling for all, filter off,");
+  Serial.println("0.5ms standby period");
+  Serial.println();
+}
 
-    delay(delayTime);
+
+void loop() 
+{  
+  if (!client.connected()) 
+    reconnect();
+  
+  client.loop();
+  
+  // Only needed in forced mode! In normal mode, you can remove the next line.
+  bme.takeForcedMeasurement(); // has no effect in normal mode
+
+  sensorTemperature = bme.readTemperature();
+  sensorPressure = bme.readPressure();
+  sensorHumidity = bme.readHumidity();
+  snprintf(msg, MSG_BUFFER_SIZE, "%f", sensorTemperature);
+  client.publish(temperatureUrl.c_str(), msg);
+  snprintf(msg, MSG_BUFFER_SIZE, "%f", sensorHumidity);
+  client.publish(humidityUrl.c_str(), msg);
+  snprintf(msg, MSG_BUFFER_SIZE, "%f", sensorPressure / 100.0F);
+  client.publish(pressureUrl.c_str(), msg);
+  
+  if(DEBUG_MODE)
+    printValues();
+  
+  // wait 500ms that MQTT messaged are published over wifi
+  delay(500);
+
+  // Enter in sleep mode
+  ESP.deepSleep((SLEEP_DELAY_MS - 500) * 1000);
 }
